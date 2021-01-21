@@ -1,0 +1,27 @@
+apiVersion: skaffold/v2beta10
+kind: Config
+metadata:
+  name: hello-world
+
+build:
+  artifacts:
+  - image: europe-west2-docker.pkg.dev/ejmadkins-app-ops/remote-registry/hello-world
+    context: .
+    jib: {}
+  tagPolicy:
+    gitCommit:
+      variant: AbbrevCommitSha
+  googleCloudBuild:
+    projectId: ejmadkins-app-ops
+
+profiles:
+- name: staging
+  deploy:
+    kustomize:
+      paths:
+      - kubernetes-manifests/overlays/staging
+- name: prod
+  deploy:
+    kustomize:
+      paths:
+      - kubernetes-manifests/overlays/prod
