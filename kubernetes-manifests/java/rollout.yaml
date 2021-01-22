@@ -8,6 +8,14 @@ spec:
   selector:
     matchLabels:
       app: hello-world
+  strategy:
+    canary:
+      steps:
+        - pause: { duration: 1m }
+        - pause: { duration: 1m }
+        - pause: { duration: 1m }
+        - pause: { duration: 1m }
+        - pause: { duration: 1m }
   template:
     metadata:
       labels:
