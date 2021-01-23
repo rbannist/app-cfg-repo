@@ -1,0 +1,9 @@
+resources:
+  - svc-rollouts-canary.yaml
+  - svc-rollouts-stable.yaml
+  - svc-hello.yaml
+  - rollout.yaml
+  - vsvc-rollouts.yaml
+
+configurations:
+  - https://argoproj.github.io/argo-rollouts/features/kustomize/rollout-transform.yaml
