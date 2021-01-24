@@ -10,8 +10,8 @@ spec:
       app: hello-world
   strategy:
     canary:
-      canaryService: canary
-      stableService: stable
+      canaryService: prod-canary
+      stableService: prod-stable
       steps:
         - setWeight: 20
         - pause: { duration: 1m }
