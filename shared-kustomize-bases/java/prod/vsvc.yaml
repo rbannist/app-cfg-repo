@@ -4,13 +4,13 @@ metadata:
   name: hello-vsvc
 spec:
   hosts:
-  - hello-world.default.svc.cluster.local
+  - prod-hello-world.default.svc.cluster.local
   http:
   - name: primary
     route:
     - destination:
-        host: hello-world-stable
+        host: prod-stable
       weight: 100
     - destination:
-        host: hello-world-canary
+        host: prod-canary
       weight: 0
