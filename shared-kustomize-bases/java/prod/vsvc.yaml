@@ -9,8 +9,8 @@ spec:
   - name: primary
     route:
     - destination:
-        host: rollouts-stable
+        host: hello-world-stable
       weight: 100
     - destination:
-        host: rollouts-canary
+        host: hello-world-canary
       weight: 0
