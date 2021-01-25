@@ -12,6 +12,12 @@ spec:
     canary:
       canaryService: prod-canary
       stableService: prod-stable
+      trafficRouting:
+        istio:
+          virtualService:
+            name: prod-hello-vsvc
+            routes:
+            - primary
       steps:
         - setWeight: 20
         - pause: { duration: 1m }
