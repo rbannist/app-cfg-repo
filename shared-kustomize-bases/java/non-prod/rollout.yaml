@@ -14,7 +14,7 @@ spec:
         app: hello-world
     spec:
       containers:
-      - image: europe-west2-docker.pkg.dev/ejmadkins-app-ops/remote-registry/hello-world
+      - image: hello-world
         name: hello-world
         ports:
         - containerPort: 8080

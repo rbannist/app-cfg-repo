@@ -1,0 +1,91 @@
+steps:
+- id: 'Build, Test and Push to Registry'
+  name: 'gcr.io/k8s-skaffold/skaffold:v1.17.1'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+     skaffold build -f=skaffold.yaml --skip-tests=true
+
+- id: 'Hydrate Manifests'
+  name: 'gcr.io/k8s-skaffold/skaffold:v1.17.1'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+     mkdir hydrated-manifests && \
+     skaffold render -f=skaffold.yaml -p=staging --loud=true --digest-source=remote --output=hydrated-manifests/staging.yaml && \
+     skaffold render -f=skaffold.yaml -p=prod --loud=true --digest-source=remote --output=hydrated-manifests/prod.yaml
+
+- name: 'gcr.io/$PROJECT_ID/cloudbuild-attestor'
+  id: 'Check Vulnerability Scan results'
+  entrypoint: 'bash'
+  args:
+  - -xe
+  - -c
+  - |
+     /scripts/check_vulnerabilities.sh -p $PROJECT_ID -i europe-west2-docker.pkg.dev/$PROJECT_ID/remote-registry/hello-world:$SHORT_SHA -t 9.5
+
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: 'bash'
+  args: [ '-c', 'gcloud secrets versions access latest --secret=github-ssh-key > /root/.ssh/id_github' ]
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    chmod 600 /root/.ssh/id_github
+    cat <<EOF >/root/.ssh/config
+    Hostname github.com
+    IdentityFile /root/.ssh/id_github
+    EOF
+    ssh-keyscan -t rsa github.com > /root/.ssh/known_hosts
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: Clone Env Repository
+  entrypoint: /bin/sh
+  args:
+  - '-c'
+  - |
+    git clone git@github.com:ejmadkins/env-repo.git
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: Copy Manifests to Env-repo
+  entrypoint: /bin/sh
+  args:
+  - '-c'
+  - |
+     cd env-repo && \
+     git checkout candidate && \
+     git config user.email "ejmadkins@gmail.com" && \
+     cp ../hydrated-manifests/staging.yaml staging/staging.yaml && \
+     cp ../hydrated-manifests/prod.yaml prod/prod.yaml && \
+     sed -i 's/apiVersion: apps\/v1/apiVersion: argoproj.io\/v1alpha1/' prod/prod.yaml && \
+     sed -i 's/kind: Deployment/kind: Rollout/' prod/prod.yaml
+
+- id: 'Push to Manifest to Env Repo'
+  name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    set -x && \
+    cd env-repo && \
+    git add staging/staging.yaml prod/prod.yaml && \
+    git commit -m "Deploying image ${SHORT_SHA} && \
+    Built from commit ${COMMIT_SHA} of repository app-repo && \
+    Author: $(git log --format='%an <%ae>' -n 1 HEAD)" && \
+    git push git@github.com:ejmadkins/env-repo.git
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
